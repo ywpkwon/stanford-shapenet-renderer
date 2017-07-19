@@ -6,6 +6,7 @@
 #
 
 import argparse, sys, os
+import numpy as np
 parser = argparse.ArgumentParser(description='Renders given obj file by rotation a camera around it.')
 parser.add_argument('--views', type=int, default=36,
                    help='number of views to be rendered')
@@ -45,11 +46,11 @@ rl = tree.nodes.new('CompositorNodeRLayers')
 map = tree.nodes.new(type="CompositorNodeMapValue")
 # Size is chosen kind of arbitrarily, try out until you're satisfied with resulting depth map.
 map.offset = [-0.7]
-map.size = [1.4]
-map.use_min = True
-map.min = [0]
-map.use_max = True
-map.max = [255]
+map.size = [0.8]
+# map.use_min = True
+# map.min = [0]
+# map.use_max = True
+# map.max = [1]
 links.new(rl.outputs['Z'], map.inputs[0])
 
 invert = tree.nodes.new(type="CompositorNodeInvert")
@@ -57,6 +58,7 @@ links.new(map.outputs[0], invert.inputs[1])
 
 # create a file output node and set the path
 depthFileOutput = tree.nodes.new(type="CompositorNodeOutputFile")
+depthFileOutput.format.file_format = 'PNG'
 depthFileOutput.label = 'Depth Output'
 links.new(invert.outputs[0], depthFileOutput.inputs[0])
 
@@ -73,44 +75,19 @@ bias_normal.inputs[2].default_value = (0.5, 0.5, 0.5, 0)
 links.new(scale_normal.outputs[0], bias_normal.inputs[1])
 
 
-normalFileOutput = tree.nodes.new(type="CompositorNodeOutputFile")
-normalFileOutput.label = 'Normal Output'
-links.new(bias_normal.outputs[0], normalFileOutput.inputs[0])
+# normalFileOutput = tree.nodes.new(type="CompositorNodeOutputFile")
+# normalFileOutput.label = 'Normal Output'
+# links.new(bias_normal.outputs[0], normalFileOutput.inputs[0])
 
-albedoFileOutput = tree.nodes.new(type="CompositorNodeOutputFile")
-albedoFileOutput.label = 'Albedo Output'
-# For some reason,
-links.new(rl.outputs['Color'], albedoFileOutput.inputs[0])
+# albedoFileOutput = tree.nodes.new(type="CompositorNodeOutputFile")
+# albedoFileOutput.label = 'Albedo Output'
+# # For some reason,
+# links.new(rl.outputs['Color'], albedoFileOutput.inputs[0])
 
 # Delete default cube
 bpy.data.objects['Cube'].select = True
 bpy.ops.object.delete()
 
-###
-# # create input render layer node
-# rl = tree.nodes.new('CompositorNodeRLayers')
-
-# # create output node
-# v = tree.nodes.new('CompositorNodeViewer')
-# v.use_alpha = False
-
-# # Links
-# links.new(rl.outputs['Z'], v.inputs[0]) # link Z to output
-
-# # render
-# bpy.ops.render.render()
-# And then I output the information into an npz file to be used within python
-
-# # get viewer pixels
-# pixels = bpy.data.images['Viewer Node'].pixels
-# print(len(pixels)) # size is always width * height * 4 (rgba)
-
-# # copy buffer to numpy array for faster manipulation
-# arr = np.array(pixels[:])
-# fname2 = "depth.npz"
-# with open(fname2, "wb") as f:
-#     np.savez(f, arr)
-###
 
 bpy.ops.import_scene.obj(filepath=f)
 print(list())
@@ -181,6 +158,21 @@ b_empty = parent_obj_to_camera(cam)
 cam_constraint.target=b_empty
 
 
+### depth part here
+#setup the depthmap calculation using blender's mist function:
+composite = tree.nodes.new(type = "CompositorNodeComposite")
+composite.location = 200,0
+scene.render.layers['RenderLayer'].use_pass_mist = True
+#the depthmap can be calculated as the distance between objects and camera ('LINEAR'), or square/inverse square of the distance ('QUADRATIC'/'INVERSEQUADRATIC'):
+scene.world.mist_settings.falloff = 'LINEAR'
+#minimum depth:
+scene.world.mist_settings.intensity = 0.0
+#maximum depth (can be changed depending on the scene geometry to normalize the depth map whatever the camera orientation and position is):
+scene.world.mist_settings.depth = 0.001
+### depth part here
+
+
+
 
 model_identifier = os.path.split(os.path.split(args.obj)[0])[1]
 fp = os.path.join(args.output_folder, model_identifier, model_identifier)
@@ -191,7 +183,7 @@ from math import radians
 stepsize = 360.0 / args.views
 rotation_mode = 'XYZ'
 
-for output_node in [depthFileOutput, normalFileOutput, albedoFileOutput]:
+for output_node in [depthFileOutput]:
     output_node.base_path = ''
 
 
@@ -234,12 +226,16 @@ for i in range(0, args.views):
 
     scene.render.filepath = fp + '_r_{0:03d}'.format(i)
     depthFileOutput.file_slots[0].path = scene.render.filepath + "_depth"
-    normalFileOutput.file_slots[0].path = scene.render.filepath + "_normal"
-    albedoFileOutput.file_slots[0].path = scene.render.filepath + "_albedo"
+    # normalFileOutput.file_slots[0].path = scene.render.filepath + "_normal"
+    # albedoFileOutput.file_slots[0].path = scene.render.filepath + "_albedo"
+
+    #ouput the depthmap:
+    # links.new(rl.outputs['Mist'], composite.inputs['Image'])
+    # scene.render.filepath = scene.render.filepath +'_dd.png'
 
     bpy.ops.render.render(write_still=True) # render still
 
-    b_empty.rotation_euler[2] += radians(stepsize)
+    # save bounding box coordinate
     xmin, xmax, ymin, ymax, zmin, zmax = get_bbox_world()
     with open(scene.render.filepath + "_coord.txt", 'w') as filep:
         x2d, y2d = get_pixel_coord(Vector((xmin, ymin, zmin)))
@@ -259,57 +255,4 @@ for i in range(0, args.views):
         x2d, y2d = get_pixel_coord(Vector((xmax, ymax, zmin)))
         filep.write('%f %f\n' % (x2d, y2d))
 
-
-        # x2d, y2d = get_pixel_coord(Vector((xmin, ymin, zmin)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmin, ymin, zmax)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmin, ymax, zmax)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmin, ymax, zmin)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-
-        # x2d, y2d = get_pixel_coord(Vector((xmax, ymin, zmin)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmax, ymin, zmax)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmax, ymax, zmax)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmax, ymax, zmin)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-
-        # x2d, y2d = get_pixel_coord(Vector((xmin, ymin, zmin)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmin, ymin, zmax)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmax, ymin, zmax)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmax, ymin, zmin)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-
-        # x2d, y2d = get_pixel_coord(Vector((xmin, ymax, zmin)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmin, ymax, zmax)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmax, ymax, zmax)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmax, ymax, zmin)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-
-        # x2d, y2d = get_pixel_coord(Vector((xmin, ymin, zmin)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmin, ymax, zmin)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmax, ymax, zmin)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmax, ymin, zmin)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-
-        # x2d, y2d = get_pixel_coord(Vector((xmin, ymin, zmax)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmin, ymax, zmax)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmax, ymax, zmax)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmax, ymin, zmax)))
-        # filep.write('%f %f\n' % (x2d, y2d))
+    b_empty.rotation_euler[2] += radians(stepsize)

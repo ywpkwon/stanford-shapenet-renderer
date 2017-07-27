@@ -45,11 +45,11 @@ rl = tree.nodes.new('CompositorNodeRLayers')
 map = tree.nodes.new(type="CompositorNodeMapValue")
 # Size is chosen kind of arbitrarily, try out until you're satisfied with resulting depth map.
 map.offset = [-0.7]
-map.size = [1.4]
-map.use_min = True
-map.min = [0]
-map.use_max = True
-map.max = [255]
+map.size = [0.8]
+# map.use_min = True
+# map.min = [0]
+# map.use_max = True
+# map.max = [255]
 links.new(rl.outputs['Z'], map.inputs[0])
 
 invert = tree.nodes.new(type="CompositorNodeInvert")
@@ -126,7 +126,6 @@ lamp3 = bpy.data.lamps['Sun']
 lamp3.shadow_method = 'NOSHADOW'
 lamp3use_specular = False
 lamp3.energy = 0.2
-# import pdb; pdb.set_trace()
 bpy.data.objects['Sun.001'].rotation_euler = bpy.data.objects['Lamp'].rotation_euler
 bpy.data.objects['Sun.001'].rotation_euler[0] += 90
 
@@ -219,73 +218,18 @@ for i in range(0, args.views):
     xmin, xmax, ymin, ymax, zmin, zmax = get_bbox_world()
     with open(scene.render.filepath + "_coord.txt", 'w') as filep:
         x2d, y2d = get_pixel_coord(Vector((xmin, ymin, zmin)))
-        filep.write('%f %f\n' % (x2d, y2d))
+        filep.write('%f %f %f %f %f\n' % (xmin, ymin, zmin, x2d, y2d))
         x2d, y2d = get_pixel_coord(Vector((xmin, ymin, zmax)))
-        filep.write('%f %f\n' % (x2d, y2d))
+        filep.write('%f %f %f %f %f\n' % (xmin, ymin, zmax, x2d, y2d))
         x2d, y2d = get_pixel_coord(Vector((xmin, ymax, zmax)))
-        filep.write('%f %f\n' % (x2d, y2d))
+        filep.write('%f %f %f %f %f\n' % (xmin, ymax, zmax, x2d, y2d))
         x2d, y2d = get_pixel_coord(Vector((xmin, ymax, zmin)))
-        filep.write('%f %f\n' % (x2d, y2d))
+        filep.write('%f %f %f %f %f\n' % (xmin, ymax, zmin, x2d, y2d))
         x2d, y2d = get_pixel_coord(Vector((xmax, ymin, zmin)))
-        filep.write('%f %f\n' % (x2d, y2d))
+        filep.write('%f %f %f %f %f\n' % (xmax, ymin, zmin, x2d, y2d))
         x2d, y2d = get_pixel_coord(Vector((xmax, ymin, zmax)))
-        filep.write('%f %f\n' % (x2d, y2d))
+        filep.write('%f %f %f %f %f\n' % (xmax, ymin, zmax, x2d, y2d))
         x2d, y2d = get_pixel_coord(Vector((xmax, ymax, zmax)))
-        filep.write('%f %f\n' % (x2d, y2d))
+        filep.write('%f %f %f %f %f\n' % (xmax, ymax, zmax, x2d, y2d))
         x2d, y2d = get_pixel_coord(Vector((xmax, ymax, zmin)))
-        filep.write('%f %f\n' % (x2d, y2d))
-
-
-        # x2d, y2d = get_pixel_coord(Vector((xmin, ymin, zmin)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmin, ymin, zmax)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmin, ymax, zmax)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmin, ymax, zmin)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-
-        # x2d, y2d = get_pixel_coord(Vector((xmax, ymin, zmin)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmax, ymin, zmax)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmax, ymax, zmax)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmax, ymax, zmin)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-
-        # x2d, y2d = get_pixel_coord(Vector((xmin, ymin, zmin)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmin, ymin, zmax)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmax, ymin, zmax)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmax, ymin, zmin)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-
-        # x2d, y2d = get_pixel_coord(Vector((xmin, ymax, zmin)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmin, ymax, zmax)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmax, ymax, zmax)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmax, ymax, zmin)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-
-        # x2d, y2d = get_pixel_coord(Vector((xmin, ymin, zmin)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmin, ymax, zmin)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmax, ymax, zmin)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmax, ymin, zmin)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-
-        # x2d, y2d = get_pixel_coord(Vector((xmin, ymin, zmax)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmin, ymax, zmax)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmax, ymax, zmax)))
-        # filep.write('%f %f\n' % (x2d, y2d))
-        # x2d, y2d = get_pixel_coord(Vector((xmax, ymin, zmax)))
-        # filep.write('%f %f\n' % (x2d, y2d))
+        filep.write('%f %f %f %f %f\n' % (xmax, ymax, zmin, x2d, y2d))
